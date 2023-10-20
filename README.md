@@ -41,6 +41,8 @@ The overall design is illustrated here:![Alt text](/docs/design.png "Design")
 
 ## Improvements
 The following are a list of improvements that can be done:
+- Due to the limited time for the task, extensive unit testing is needed
+- I didn't implement any integration tests
 - Migrations can be done in a standard way through external CLI
 - Seeding can be done using specific command and utility
 - Caching
