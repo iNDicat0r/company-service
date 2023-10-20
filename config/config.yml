@@ -1,0 +1,14 @@
+# Global settings
+global:
+  jwt_signer_key: "1234567890"
+# Server config
+server:
+  host: "localhost"
+  port: 8000
+# Database
+database:
+  name: "testdb"
+  host: "127.0.0.1"
+  port: 3306
+  user: "user"
+  password: "passwd"
