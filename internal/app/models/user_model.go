@@ -9,7 +9,7 @@ import (
 
 // User represents the user stored in DB.
 type User struct {
-	ID        uuid.UUID `gorm:"primaryKey;type:uuid;default:UUID()"`
+	ID        uuid.UUID `gorm:"primaryKey;type:char(36)"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`

@@ -1,6 +1,8 @@
 package infra
 
 import (
+	"time"
+
 	"github.com/IBM/sarama"
 )
 
@@ -11,7 +13,11 @@ type EventProducer struct {
 
 // NewEventProducer creates a new async producer.
 func NewEventProducer(brokerList []string) (*EventProducer, error) {
-	producer, err := sarama.NewAsyncProducer(brokerList, nil)
+	config := sarama.NewConfig()
+	config.Producer.RequiredAcks = sarama.WaitForLocal      // Only wait for leader to respond
+	config.Producer.Flush.Frequency = 50 * time.Millisecond // Optional: Flush messages every 500ms
+
+	producer, err := sarama.NewAsyncProducer(brokerList, config)
 
 	return &EventProducer{producer: producer}, err
 }

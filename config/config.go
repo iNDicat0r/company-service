@@ -24,6 +24,9 @@ type Config struct {
 		User     string `yaml:"user" envconfig:"DATABASE_USER"`
 		Password string `yaml:"password" envconfig:"DATABASE_PASSWORD"`
 	} `yaml:"database"`
+	Kafka struct {
+		URI string `yaml:"uri" envconfig:"KAFKA_URI"`
+	} `yaml:"kafka"`
 }
 
 // NewConfig returns a new configuration by parsing yml and env vars.

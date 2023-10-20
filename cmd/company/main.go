@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/iNDicat0r/company/config"
 	"github.com/iNDicat0r/company/internal/app/handlers"
+	"github.com/iNDicat0r/company/internal/app/infra"
 	"github.com/iNDicat0r/company/internal/app/middlewares"
 	"github.com/iNDicat0r/company/internal/app/repositories"
 	"github.com/iNDicat0r/company/internal/app/services"
@@ -29,6 +30,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
+
+	// setup kafka producer
+	producer, _ := infra.NewEventProducer([]string{conf.Kafka.URI})
 
 	// setup repositories
 	userRepo, err := repositories.NewSQLUserRepository(db)
@@ -53,7 +57,7 @@ func main() {
 	}
 
 	// setup handlers
-	companyHandler, err := handlers.NewCompanyHandler(companySvc)
+	companyHandler, err := handlers.NewCompanyHandler(companySvc, producer)
 	if err != nil {
 		log.Fatalf("failed to setup company handlers: %v", err)
 	}

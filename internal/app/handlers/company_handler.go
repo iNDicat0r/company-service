@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -10,17 +11,29 @@ import (
 	"github.com/iNDicat0r/company/internal/app/services"
 )
 
+// this should be in config
+const topic = "events"
+
+type eventProducer interface {
+	SendMessage(topic string, payload []byte) error
+}
+
 // CompanyHandler is responsible for handling routes for company resources.
 type CompanyHandler struct {
 	CompanyService services.CompanyGetCreateUpdateDeleter
+	eventProducer  eventProducer
 }
 
 // NewCompanyHandler creates a new company handler.
-func NewCompanyHandler(companyService services.CompanyGetCreateUpdateDeleter) (*CompanyHandler, error) {
+func NewCompanyHandler(companyService services.CompanyGetCreateUpdateDeleter, eventProducer eventProducer) (*CompanyHandler, error) {
 	if companyService == nil {
 		return nil, errors.New("company service is nil")
 	}
-	return &CompanyHandler{CompanyService: companyService}, nil
+
+	if eventProducer == nil {
+		return nil, errors.New("eventProducer is nil")
+	}
+	return &CompanyHandler{CompanyService: companyService, eventProducer: eventProducer}, nil
 }
 
 // HandleGetCompany get a company handler.
@@ -74,6 +87,13 @@ func (h *CompanyHandler) HandleCreateCompany(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// TODO: this is not right, we need an envelope to show the type of the event
+	data, err := json.Marshal(comp)
+	if err == nil {
+		h.eventProducer.SendMessage(topic, data)
+	}
+
 	c.JSON(http.StatusCreated, comp)
 }
 
@@ -104,6 +124,13 @@ func (h *CompanyHandler) HandleUpdateCompany(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// TODO: this is not right, we need an envelope to show the type of the event
+	data, err := json.Marshal(comp)
+	if err == nil {
+		h.eventProducer.SendMessage(topic, data)
+	}
+
 	c.JSON(http.StatusOK, comp)
 }
 
@@ -125,6 +152,12 @@ func (h *CompanyHandler) HandleDeleteCompany(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// TODO: this is not right, we need an envelope to show the type of the event
+	data, err := json.Marshal(id)
+	if err == nil {
+		h.eventProducer.SendMessage(topic, data)
 	}
 
 	c.JSON(http.StatusOK, nil)

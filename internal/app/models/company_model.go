@@ -10,7 +10,7 @@ import (
 
 // Company represents the company stored in DB.
 type Company struct {
-	ID              uuid.UUID `gorm:"primarykey;type:uuid;default:uuid_generate_v4()"`
+	ID              uuid.UUID `gorm:"primaryKey;type:char(36)"`
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	DeletedAt       gorm.DeletedAt `gorm:"index"`
@@ -20,4 +20,9 @@ type Company struct {
 	Registered      bool
 	Type            common.Type `gorm:"type:enum('Corporations', 'NonProfit', 'Cooperative', 'Sole Proprietorship')"`
 	UserID          uuid.UUID   `gorm:"type:uuid"`
+}
+
+func (c *Company) BeforeCreate(_ *gorm.DB) (err error) {
+	c.ID = uuid.New()
+	return
 }

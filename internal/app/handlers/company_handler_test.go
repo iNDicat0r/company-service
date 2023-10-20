@@ -19,14 +19,20 @@ func TestNewCompanyHandler(t *testing.T) {
 	t.Parallel()
 	cases := map[string]struct {
 		companyService services.CompanyGetCreateUpdateDeleter
+		producer       eventProducer
 		expErr         string
 	}{
 		"no company service": {
 			companyService: nil,
 			expErr:         "company service is nil",
 		},
+		"no event producer": {
+			companyService: &mockCompanyService{},
+			expErr:         "eventProducer is nil",
+		},
 		"success": {
 			companyService: &mockCompanyService{},
+			producer:       &producerStub{},
 		},
 	}
 
@@ -34,7 +40,7 @@ func TestNewCompanyHandler(t *testing.T) {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			h, err := NewCompanyHandler(tt.companyService)
+			h, err := NewCompanyHandler(tt.companyService, tt.producer)
 			if tt.expErr != "" {
 				assert.EqualError(t, err, tt.expErr)
 				assert.Nil(t, h)
@@ -49,6 +55,7 @@ func TestHandleGetCompany(t *testing.T) {
 	t.Parallel()
 	cases := map[string]struct {
 		companyService services.CompanyGetCreateUpdateDeleter
+		producer       eventProducer
 		params         gin.Params
 		responseStatus int
 		responseBody   string
@@ -56,6 +63,7 @@ func TestHandleGetCompany(t *testing.T) {
 	}{
 		"invalid company id": {
 			companyService: &mockCompanyService{},
+			producer:       &producerStub{},
 			params: gin.Params{gin.Param{
 				Key:   "companyID",
 				Value: "invalidid2738",
@@ -65,6 +73,7 @@ func TestHandleGetCompany(t *testing.T) {
 		},
 		"internal service error": {
 			companyService: &mockCompanyService{err: errors.New("internal error")},
+			producer:       &producerStub{},
 			params: gin.Params{gin.Param{
 				Key:   "companyID",
 				Value: "ca8fc620-509a-40ac-8cc0-525c37c9c4b9",
@@ -76,6 +85,7 @@ func TestHandleGetCompany(t *testing.T) {
 			companyService: &mockCompanyService{singleCompany: models.Company{
 				Description: "description 1",
 			}},
+			producer: &producerStub{},
 			params: gin.Params{gin.Param{
 				Key:   "companyID",
 				Value: "ca8fc620-509a-40ac-8cc0-525c37c9c4b9",
@@ -92,7 +102,7 @@ func TestHandleGetCompany(t *testing.T) {
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
 			c.Params = append(c.Params, tt.params...)
-			handler, _ := NewCompanyHandler(tt.companyService)
+			handler, _ := NewCompanyHandler(tt.companyService, tt.producer)
 			handler.HandleGetCompany(c)
 			assert.Equal(t, tt.responseStatus, c.Writer.Status())
 			assert.Equal(t, tt.responseBody, w.Body.String())
@@ -104,6 +114,7 @@ func TestHandleCreateCompany(t *testing.T) {
 	t.Parallel()
 	cases := map[string]struct {
 		companyService   services.CompanyGetCreateUpdateDeleter
+		producer         eventProducer
 		params           gin.Params
 		setUserIDContext string
 		requestBody      string
@@ -113,6 +124,7 @@ func TestHandleCreateCompany(t *testing.T) {
 	}{
 		"invalid request": {
 			companyService:   &mockCompanyService{},
+			producer:         &producerStub{},
 			responseStatus:   http.StatusBadRequest,
 			requestBody:      "{",
 			responseBody:     "{\"error\":\"unexpected EOF\"}",
@@ -120,6 +132,7 @@ func TestHandleCreateCompany(t *testing.T) {
 		},
 		"success": {
 			companyService:   &mockCompanyService{},
+			producer:         &producerStub{},
 			responseStatus:   http.StatusCreated,
 			requestBody:      `{"name":"company1"}`,
 			responseBody:     "{\"ID\":\"00000000-0000-0000-0000-000000000000\",\"CreatedAt\":\"0001-01-01T00:00:00Z\",\"UpdatedAt\":\"0001-01-01T00:00:00Z\",\"DeletedAt\":null,\"Name\":\"\",\"Description\":\"\",\"EmployeesAmount\":0,\"Registered\":false,\"Type\":\"\",\"UserID\":\"00000000-0000-0000-0000-000000000000\"}",
@@ -140,7 +153,7 @@ func TestHandleCreateCompany(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			c.Request = req
 
-			handler, _ := NewCompanyHandler(tt.companyService)
+			handler, _ := NewCompanyHandler(tt.companyService, tt.producer)
 			handler.HandleCreateCompany(c)
 			assert.Equal(t, tt.responseStatus, c.Writer.Status())
 			assert.Equal(t, tt.responseBody, w.Body.String())
@@ -167,4 +180,12 @@ func (m *mockCompanyService) Update(_ context.Context, _ uuid.UUID, _ services.C
 
 func (m *mockCompanyService) Delete(_ context.Context, _, _ uuid.UUID) error {
 	return m.err
+}
+
+type producerStub struct {
+	err error
+}
+
+func (p *producerStub) SendMessage(topic string, payload []byte) error {
+	return p.err
 }
